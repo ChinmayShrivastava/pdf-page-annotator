@@ -1,3 +1,4 @@
+import ast
 import logging
 
 from dotenv import load_dotenv
@@ -5,7 +6,7 @@ from llama_index.llms.openai import OpenAI
 from pypdf import PdfReader
 
 from .preprocess import remove_double_spaces
-from .prompts import EXTRACT_PAGES, HAS_TABLE_OF_CONTENTS
+from .prompts import EXTRACT_PAGES, GET_RELEVANT_PAGES, HAS_TABLE_OF_CONTENTS
 
 load_dotenv()
 
@@ -122,6 +123,33 @@ class PDFAnnotator:
                 if len(parts) == 3:
                     self.contents.append(ContentItem(parts[0], int(parts[1]), int(parts[2])))
         return self.contents
+    
+    def get_relevant_pages(self, query: str) -> str:
+        response = self.llm.complete(GET_RELEVANT_PAGES.format(contents="\n".join([f"{content.unique_title}, {content.start_page}, {content.end_page}" for content in self.contents]), query=query)).text
+        parsed_response = ast.literal_eval(response)
+        start_page = parsed_response[0]
+        end_page = parsed_response[1]
+        texts = []
+        for page_no in range(start_page, end_page+1):
+            texts.append(self.reader.pages[page_no].extract_text())
+        return {
+            "query": query,
+            "start_page": start_page,
+            "end_page": end_page,
+            "texts": texts
+        }
+    
+    def save_contents(self, path: str) -> None:
+        with open(path, "w") as f:
+            for content in self.contents:
+                f.write(f"{content.unique_title}<>{content.start_page}<>{content.end_page}\n")
+
+    def load_contents(self, path: str) -> None:
+        with open(path, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                parts = line.split("<>")
+                self.contents.append(ContentItem(parts[0], int(parts[1]), int(parts[2])))
 
 if __name__ == "__main__":
     pdf_path = "doefund.pdf"
