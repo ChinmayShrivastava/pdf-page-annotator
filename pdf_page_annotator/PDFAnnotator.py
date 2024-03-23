@@ -121,7 +121,10 @@ class PDFAnnotator:
             for line in lines:
                 parts = line.split(", ")
                 if len(parts) == 3:
-                    self.contents.append(ContentItem(parts[0], int(parts[1]), int(parts[2])))
+                    try:
+                        self.contents.append(ContentItem(parts[0], int(parts[1]), int(parts[2])))
+                    except ValueError:
+                        self.logger.warning(f"Could not parse {line}")
         return self.contents
     
     def get_relevant_pages(self, query: str) -> str:
