@@ -133,8 +133,8 @@ class PDFAnnotator:
         start_page = parsed_response[0]
         end_page = parsed_response[1]
         texts = []
-        for page_no in range(start_page-1, end_page+1-1): # -1 because the pages are 1-indexed
-            texts.append(self.reader.pages[page_no].extract_text())
+        for page_no in range(start_page, end_page+1):
+            texts.append(self.reader.pages[page_no-1].extract_text()) # -1 because page numbers are 1-indexed
         return {
             "query": query,
             "start_page": start_page,
